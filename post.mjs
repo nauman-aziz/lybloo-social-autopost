@@ -9,7 +9,8 @@ const STATE_FILE = new URL('./posted.json', import.meta.url);
 const GRAPH = `https://graph.facebook.com/${process.env.GRAPH_API_VERSION || 'v26.0'}`;
 const DRY_RUN = process.env.DRY_RUN === '1';
 
-const { PAGE_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID } = process.env;
+const { FB_PAGE_ID, IG_USER_ID } = process.env;
+let PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
 function caption(product) {
   return [
@@ -122,6 +123,24 @@ async function postToInstagram(imageUrl, text, tag) {
   return id;
 }
 
+// Facebook only lets a Page token publish to the Page. The secret may hold the user token it was
+// minted from, so swap it for the Page's own token; a Page token passed in comes back unchanged.
+async function usePageToken() {
+  const { access_token: pageToken } = await graphGet(FB_PAGE_ID, { fields: 'access_token' });
+  if (pageToken) PAGE_ACCESS_TOKEN = pageToken;
+
+  const { data } = await graphGet('debug_token', { input_token: PAGE_ACCESS_TOKEN });
+  const expires = data?.expires_at ? new Date(data.expires_at * 1000).toISOString() : 'never';
+  console.log(`Using a ${data?.type ?? 'unknown'} token for ${data?.profile_id ?? FB_PAGE_ID}, expires: ${expires}`);
+}
+
+// Shopify's CDN serves WebP to clients that accept it, which Instagram rejects; pjpg forces a JPEG.
+function jpegUrl(src) {
+  const url = new URL(src);
+  url.searchParams.set('format', 'pjpg');
+  return url.href;
+}
+
 // Read-only check that the token can see both accounts; used by dry runs.
 async function checkAccess() {
   for (const [label, path] of [['Facebook Page', `${FB_PAGE_ID}?fields=name`], ['Instagram', `${IG_USER_ID}?fields=username`]]) {
@@ -147,7 +166,8 @@ async function main() {
     return;
   }
 
-  const imageUrl = product.images[0].src;
+  const imageUrl = jpegUrl(product.images[0].src);
+  if (PAGE_ACCESS_TOKEN) await usePageToken();
   const text = caption(product);
   console.log(`Posting "${product.title}" (${product.id})\nImage: ${imageUrl}\n---\n${text}\n---`);
   const tag = PAGE_ACCESS_TOKEN ? await findProductTag(product) : null;
