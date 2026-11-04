@@ -42,6 +42,13 @@ post those products again.
 Go to **Actions → Lybloo autopost → Run workflow**. With "dry run" ticked, the run only prints the post it would make.
 Untick it to post for real once. After that, the schedule runs by itself.
 
+## Link in bio
+
+Instagram captions can't hold clickable links. After each post, the script rebuilds `docs/index.html`: a grid of every
+posted product, newest first, each linking to its page on lybloo.com. GitHub Pages serves it at
+https://nauman-aziz.github.io/lybloo-social-autopost/. That URL is the website link in the @lybloopakistan bio, and the
+Instagram caption tells people to tap it.
+
 ## Instagram product tags
 
 Instagram captions can't hold clickable links. Instead, the script tags the product on the Instagram photo, so tapping
