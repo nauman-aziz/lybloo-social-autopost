@@ -2,6 +2,7 @@
 // Each run posts ONE published product that hasn't been posted yet to the
 // Lybloo Facebook Page and Instagram Business account, then records it in posted.json.
 import { readFile, writeFile } from 'node:fs/promises';
+import { renderLinkPage } from './links.mjs';
 
 const STORE_URL = 'https://lybloo.com';
 const STATE_FILE = new URL('./posted.json', import.meta.url);
@@ -150,14 +151,24 @@ async function main() {
   const text = caption(product);
   console.log(`Posting "${product.title}" (${product.id})\nImage: ${imageUrl}\n---\n${text}\n---`);
   const tag = PAGE_ACCESS_TOKEN ? await findProductTag(product) : null;
-  // Links in Instagram captions aren't clickable, so point people at the product tag instead.
-  const igText = tag ? text.replace('🛍️ Shop now:', '🛍️ Tap the photo to shop, or visit:') : text;
+  // Links in Instagram captions aren't clickable, so point people at the product tag or the bio link instead.
+  const igText = text.replace(
+    '🛍️ Shop now:',
+    tag ? '🛍️ Tap the photo to shop, or visit:' : '🛍️ Tap the link in our bio to shop this product, or visit:',
+  );
   if (DRY_RUN) {
     if (PAGE_ACCESS_TOKEN) await checkAccess();
     return;
   }
 
-  const record = { product_title: product.title, last_posted_at: new Date().toISOString(), cycle_number: 1 };
+  const record = {
+    product_title: product.title,
+    handle: product.handle,
+    image: imageUrl,
+    price: product.variants?.[0]?.price,
+    last_posted_at: new Date().toISOString(),
+    cycle_number: 1,
+  };
   const results = await Promise.allSettled([postToFacebook(imageUrl, text), postToInstagram(imageUrl, igText, tag)]);
   const [facebook, instagram] = results.map((r) => (r.status === 'fulfilled' ? 'posted' : 'failed'));
   results.forEach((r, i) => {
@@ -169,6 +180,7 @@ async function main() {
   if (facebook === 'posted' || instagram === 'posted') {
     posted[product.id] = { ...record, facebook_status: facebook, instagram_status: instagram };
     await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
+    await renderLinkPage(posted);
   }
   if (facebook === 'failed' || instagram === 'failed') process.exitCode = 1;
 }
