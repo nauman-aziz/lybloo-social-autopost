@@ -43,5 +43,18 @@
     "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
+  },
+  "10377195847911": {
+    "product_title": "reMarkable USB-A to USB-C Cable — 1m",
+    "handle": "remarkable-usb-a-to-usb-c-cable-1m",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/remarkable-usb-a-to-usb-c-cable-1m-1.jpg?v=1793285265&format=pjpg",
+    "price": "650.00",
+    "last_posted_at": "2026-11-04T22:17:58.737Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "failed"
   }
 }
