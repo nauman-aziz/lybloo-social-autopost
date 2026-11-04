@@ -65,6 +65,16 @@ async function postToInstagram(imageUrl, text) {
   return id;
 }
 
+// Read-only check that the token can see both accounts; used by dry runs.
+async function checkAccess() {
+  for (const [label, path] of [['Facebook Page', `${FB_PAGE_ID}?fields=name`], ['Instagram', `${IG_USER_ID}?fields=username`]]) {
+    const res = await fetch(`${GRAPH}/${path}&access_token=${PAGE_ACCESS_TOKEN}`);
+    const body = await res.json();
+    if (body.error) throw new Error(`${label} access check failed: ${body.error.message}`);
+    console.log(`${label} access OK: ${body.name ?? body.username}`);
+  }
+}
+
 async function main() {
   if (!DRY_RUN && !(PAGE_ACCESS_TOKEN && FB_PAGE_ID && IG_USER_ID)) {
     throw new Error('Set PAGE_ACCESS_TOKEN, FB_PAGE_ID and IG_USER_ID (or DRY_RUN=1).');
@@ -83,7 +93,10 @@ async function main() {
   const imageUrl = product.images[0].src;
   const text = caption(product);
   console.log(`Posting "${product.title}" (${product.id})\nImage: ${imageUrl}\n---\n${text}\n---`);
-  if (DRY_RUN) return;
+  if (DRY_RUN) {
+    if (PAGE_ACCESS_TOKEN) await checkAccess();
+    return;
+  }
 
   const record = { product_title: product.title, last_posted_at: new Date().toISOString(), cycle_number: 1 };
   const results = await Promise.allSettled([postToFacebook(imageUrl, text), postToInstagram(imageUrl, text)]);
