@@ -49,8 +49,64 @@ async function postToFacebook(imageUrl, text) {
   return post_id ?? id;
 }
 
-async function postToInstagram(imageUrl, text) {
-  const { id: containerId } = await graph(`${IG_USER_ID}/media`, { image_url: imageUrl, caption: text });
+async function graphGet(path, params = {}) {
+  const query = new URLSearchParams({ ...params, access_token: PAGE_ACCESS_TOKEN });
+  const body = await (await fetch(`${GRAPH}/${path}?${query}`)).json();
+  if (body.error) throw new Error(`${path}: ${body.error.message}`);
+  return body;
+}
+
+// Finds the Instagram Shop catalog item for a Shopify product so the IG post can carry a
+// tappable product tag that opens it on lybloo.com. Returns null (post untagged) when the
+// account isn't eligible or the product isn't approved in the catalog yet.
+async function findProductTag(product) {
+  try {
+    const { shopping_product_tag_eligibility } = await graphGet(IG_USER_ID, { fields: 'shopping_product_tag_eligibility' });
+    if (!shopping_product_tag_eligibility) {
+      console.log('Product tag: skipped, the Instagram account is not eligible for Instagram Shopping tags.');
+      return null;
+    }
+
+    const catalogId = process.env.CATALOG_ID || (await graphGet(`${IG_USER_ID}/available_catalogs`)).data?.[0]?.catalog_id;
+    if (!catalogId) {
+      console.log('Product tag: skipped, no catalog is connected to the Instagram Shop.');
+      return null;
+    }
+
+    const { data = [] } = await graphGet(`${IG_USER_ID}/catalog_product_search`, { catalog_id: catalogId, q: product.title });
+    // The Shopify Facebook & Instagram channel puts the Shopify product id inside retailer_id.
+    const match =
+      data.find((p) => p.retailer_id?.includes(String(product.id))) ?? data.find((p) => p.product_name === product.title);
+    if (!match) {
+      console.log(`Product tag: skipped, "${product.title}" not found in catalog ${catalogId}.`);
+      return null;
+    }
+    if (match.review_status && match.review_status !== 'approved') {
+      console.log(`Product tag: skipped, catalog item ${match.product_id} is "${match.review_status}".`);
+      return null;
+    }
+
+    console.log(`Product tag: catalog item ${match.product_id} (${match.retailer_id}).`);
+    return { product_id: match.product_id, x: 0.5, y: 0.8 };
+  } catch (err) {
+    console.log(`Product tag: skipped, ${err.message}`);
+    return null;
+  }
+}
+
+async function postToInstagram(imageUrl, text, tag) {
+  let containerId;
+  try {
+    ({ id: containerId } = await graph(`${IG_USER_ID}/media`, {
+      image_url: imageUrl,
+      caption: text,
+      ...(tag && { product_tags: JSON.stringify([tag]) }),
+    }));
+  } catch (err) {
+    if (!tag) throw err;
+    console.log(`Product tag rejected, posting without it: ${err.message}`);
+    ({ id: containerId } = await graph(`${IG_USER_ID}/media`, { image_url: imageUrl, caption: text }));
+  }
 
   // Instagram fetches the image asynchronously; publishing before it finishes fails.
   for (let attempt = 0; attempt < 12; attempt++) {
@@ -93,13 +149,16 @@ async function main() {
   const imageUrl = product.images[0].src;
   const text = caption(product);
   console.log(`Posting "${product.title}" (${product.id})\nImage: ${imageUrl}\n---\n${text}\n---`);
+  const tag = PAGE_ACCESS_TOKEN ? await findProductTag(product) : null;
+  // Links in Instagram captions aren't clickable, so point people at the product tag instead.
+  const igText = tag ? text.replace('🛍️ Shop now:', '🛍️ Tap the photo to shop, or visit:') : text;
   if (DRY_RUN) {
     if (PAGE_ACCESS_TOKEN) await checkAccess();
     return;
   }
 
   const record = { product_title: product.title, last_posted_at: new Date().toISOString(), cycle_number: 1 };
-  const results = await Promise.allSettled([postToFacebook(imageUrl, text), postToInstagram(imageUrl, text)]);
+  const results = await Promise.allSettled([postToFacebook(imageUrl, text), postToInstagram(imageUrl, igText, tag)]);
   const [facebook, instagram] = results.map((r) => (r.status === 'fulfilled' ? 'posted' : 'failed'));
   results.forEach((r, i) => {
     const name = i === 0 ? 'Facebook' : 'Instagram';

@@ -32,6 +32,7 @@ jobs:
           PAGE_ACCESS_TOKEN: ${{ secrets.PAGE_ACCESS_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          CATALOG_ID: ${{ secrets.CATALOG_ID }}
       - name: Save posted list
         if: always()
         run: |

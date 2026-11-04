@@ -42,6 +42,18 @@ post those products again.
 Go to **Actions → Lybloo autopost → Run workflow**. With "dry run" ticked, the run only prints the post it would make.
 Untick it to post for real once. After that, the schedule runs by itself.
 
+## Instagram product tags
+
+Instagram captions can't hold clickable links. Instead, the script tags the product on the Instagram photo, so tapping
+it opens that product on lybloo.com. This needs:
+
+- An approved Instagram Shop for @lybloopakistan, with the Shopify catalog connected through the Shopify
+  "Facebook & Instagram" sales channel (set up in Commerce Manager).
+- The `instagram_shopping_tag_products` and `catalog_management` permissions on the token.
+- Optional: a `CATALOG_ID` secret. Without it, the script uses the first catalog connected to the Instagram account.
+
+When any of these is missing, or the product isn't approved in the catalog yet, the script posts without a tag and logs why.
+
 ## Notes
 
 - Locally: `DRY_RUN=1 node post.mjs` (Node 20 or newer).
