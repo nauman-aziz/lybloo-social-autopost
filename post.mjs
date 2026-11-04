@@ -3,6 +3,7 @@
 // Lybloo Facebook Page and Instagram Business account, then records it in posted.json.
 import { readFile, writeFile } from 'node:fs/promises';
 import { renderLinkPage } from './links.mjs';
+import { buildStoryImage } from './story.mjs';
 
 const STORE_URL = 'https://lybloo.com';
 const STATE_FILE = new URL('./posted.json', import.meta.url);
@@ -110,6 +111,10 @@ async function postToInstagram(imageUrl, text, tag) {
     ({ id: containerId } = await graph(`${IG_USER_ID}/media`, { image_url: imageUrl, caption: text }));
   }
 
+  return publishInstagram(containerId);
+}
+
+async function publishInstagram(containerId) {
   // Instagram fetches the image asynchronously; publishing before it finishes fails.
   for (let attempt = 0; attempt < 12; attempt++) {
     const res = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${PAGE_ACCESS_TOKEN}`);
@@ -121,6 +126,32 @@ async function postToInstagram(imageUrl, text, tag) {
 
   const { id } = await graph(`${IG_USER_ID}/media_publish`, { creation_id: containerId });
   return id;
+}
+
+// Uploads the story card to the Page as an unpublished photo. Facebook's story is made from
+// that photo, and Instagram (which needs a public URL) fetches Facebook's copy of it.
+async function uploadStoryImage(image) {
+  const form = new FormData();
+  form.append('source', new Blob([image], { type: 'image/jpeg' }), 'story.jpg');
+  form.append('published', 'false');
+  form.append('access_token', PAGE_ACCESS_TOKEN);
+  const body = await (await fetch(`${GRAPH}/${FB_PAGE_ID}/photos`, { method: 'POST', body: form })).json();
+  if (body.error) throw new Error(`story upload: ${body.error.message}`);
+
+  const { images = [] } = await graphGet(body.id, { fields: 'images' });
+  const largest = images.reduce((a, b) => (b.width > (a?.width ?? 0) ? b : a), null);
+  if (!largest) throw new Error('story upload: Facebook returned no image URL');
+  return { photoId: body.id, url: largest.source };
+}
+
+async function postFacebookStory(photoId) {
+  const { post_id, id } = await graph(`${FB_PAGE_ID}/photo_stories`, { photo_id: photoId });
+  return post_id ?? id;
+}
+
+async function postInstagramStory(url) {
+  const { id: containerId } = await graph(`${IG_USER_ID}/media`, { media_type: 'STORIES', image_url: url });
+  return publishInstagram(containerId);
 }
 
 // Facebook only lets a Page token publish to the Page. The secret may hold the user token it was
@@ -176,7 +207,9 @@ async function main() {
     '🛍️ Shop now:',
     tag ? '🛍️ Tap the photo to shop, or visit:' : '🛍️ Tap the link in our bio to shop this product, or visit:',
   );
+  const storyImage = await buildStoryImage(product, imageUrl);
   if (DRY_RUN) {
+    console.log(`Story card built: ${Math.round(storyImage.length / 1024)} KB`);
     if (PAGE_ACCESS_TOKEN) await checkAccess();
     return;
   }
@@ -196,13 +229,33 @@ async function main() {
     console.log(r.status === 'fulfilled' ? `${name}: posted ${r.value}` : `${name}: FAILED ${r.reason.message}`);
   });
 
+  let facebookStory = 'failed';
+  let instagramStory = 'failed';
+  try {
+    const story = await uploadStoryImage(storyImage);
+    const stories = await Promise.allSettled([postFacebookStory(story.photoId), postInstagramStory(story.url)]);
+    [facebookStory, instagramStory] = stories.map((r) => (r.status === 'fulfilled' ? 'posted' : 'failed'));
+    stories.forEach((r, i) => {
+      const name = i === 0 ? 'Facebook story' : 'Instagram story';
+      console.log(r.status === 'fulfilled' ? `${name}: posted ${r.value}` : `${name}: FAILED ${r.reason.message}`);
+    });
+  } catch (err) {
+    console.log(`Stories: FAILED ${err.message}`);
+  }
+
   // Record the product if either platform got it, so a one-sided failure doesn't double-post the other.
   if (facebook === 'posted' || instagram === 'posted') {
-    posted[product.id] = { ...record, facebook_status: facebook, instagram_status: instagram };
+    posted[product.id] = {
+      ...record,
+      facebook_status: facebook,
+      instagram_status: instagram,
+      facebook_story_status: facebookStory,
+      instagram_story_status: instagramStory,
+    };
     await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
     await renderLinkPage(posted);
   }
-  if (facebook === 'failed' || instagram === 'failed') process.exitCode = 1;
+  if ([facebook, instagram, facebookStory, instagramStory].includes('failed')) process.exitCode = 1;
 }
 
 main().catch((err) => {

@@ -42,6 +42,13 @@ post those products again.
 Go to **Actions → Lybloo autopost → Run workflow**. With "dry run" ticked, the run only prints the post it would make.
 Untick it to post for real once. After that, the schedule runs by itself.
 
+## Stories
+
+After the feed posts, `story.mjs` draws a 1080×1920 story card (product photo, name, price, "Shop now · link in bio"),
+keeping everything clear of the areas Instagram covers at the top and bottom of a story. The card is uploaded to the Page
+as an unpublished photo, posted as a Facebook Page story, and Instagram makes its story from Facebook's copy of the
+image. Instagram doesn't let apps add link stickers to stories, so the card points to the bio link instead.
+
 ## Link in bio
 
 Instagram captions can't hold clickable links. After each post, the script rebuilds `docs/index.html`: a grid of every
