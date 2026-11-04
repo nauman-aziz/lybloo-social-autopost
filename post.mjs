@@ -2,7 +2,9 @@
 // Each run posts ONE published product that hasn't been posted yet to the
 // Lybloo Facebook Page and Instagram Business account, then records it in posted.json.
 import { readFile, writeFile } from 'node:fs/promises';
+import { hashtags } from './hashtags.mjs';
 import { renderLinkPage } from './links.mjs';
+import { buildReel } from './reel.mjs';
 import { buildStoryImage } from './story.mjs';
 
 const STORE_URL = 'https://lybloo.com';
@@ -20,16 +22,24 @@ function caption(product) {
     '🛍️ Shop now:',
     `${STORE_URL}/products/${product.handle}`,
     '',
-    '#Lybloo #TechAccessories #GadgetsPakistan',
+    hashtags(product),
   ].join('\n');
+}
+
+// Shopify rate-limits products.json in bursts, so back off and retry before giving up.
+async function fetchJson(url) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) return res.json();
+    if (attempt === 4) throw new Error(`${url}: HTTP ${res.status}`);
+    await new Promise((r) => setTimeout(r, attempt * 15000));
+  }
 }
 
 async function fetchProducts() {
   const products = [];
   for (let page = 1; ; page++) {
-    const res = await fetch(`${STORE_URL}/products.json?limit=250&page=${page}`);
-    if (!res.ok) throw new Error(`products.json page ${page}: HTTP ${res.status}`);
-    const batch = (await res.json()).products;
+    const batch = (await fetchJson(`${STORE_URL}/products.json?limit=250&page=${page}`)).products;
     if (!batch.length) break;
     products.push(...batch);
     if (batch.length < 250) break;
@@ -114,18 +124,79 @@ async function postToInstagram(imageUrl, text, tag) {
   return publishInstagram(containerId);
 }
 
-async function publishInstagram(containerId) {
-  // Instagram fetches the image asynchronously; publishing before it finishes fails.
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const res = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${PAGE_ACCESS_TOKEN}`);
-    const { status_code } = await res.json();
-    if (status_code === 'FINISHED') break;
-    if (status_code === 'ERROR' || status_code === 'EXPIRED') throw new Error(`IG container ${status_code}`);
-    await new Promise((r) => setTimeout(r, 5000));
-  }
-
+async function publishInstagram(containerId, attempts = 12) {
+  await waitForContainer(containerId, attempts);
   const { id } = await graph(`${IG_USER_ID}/media_publish`, { creation_id: containerId });
   return id;
+}
+
+// Instagram fetches and processes media asynchronously; publishing before it finishes fails.
+async function waitForContainer(containerId, attempts = 12) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const { status_code, status } = await graphGet(containerId, { fields: 'status_code,status' });
+    if (status_code === 'FINISHED') return;
+    if (status_code === 'ERROR' || status_code === 'EXPIRED') throw new Error(`IG container ${status_code}: ${status ?? ''}`);
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  throw new Error(`IG container ${containerId} still processing after ${attempts * 5}s`);
+}
+
+// Carousels: every product photo (up to Instagram's 10) as one swipeable post.
+async function postInstagramCarousel(imageUrls, text) {
+  const children = [];
+  for (const url of imageUrls) {
+    const { id } = await graph(`${IG_USER_ID}/media`, { image_url: url, is_carousel_item: 'true' });
+    children.push(id);
+  }
+  for (const id of children) await waitForContainer(id);
+  const { id } = await graph(`${IG_USER_ID}/media`, { media_type: 'CAROUSEL', children: children.join(','), caption: text });
+  return publishInstagram(id);
+}
+
+async function postFacebookAlbum(imageUrls, text) {
+  const attached = [];
+  for (const url of imageUrls) {
+    const { id } = await graph(`${FB_PAGE_ID}/photos`, { url, published: 'false' });
+    attached.push({ media_fbid: id });
+  }
+  const params = { message: text };
+  attached.forEach((media, i) => (params[`attached_media[${i}]`] = JSON.stringify(media)));
+  const { id } = await graph(`${FB_PAGE_ID}/feed`, params);
+  return id;
+}
+
+// Sends a local file to Meta's resumable upload host, used by both Reels endpoints.
+async function rupload(url, video) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `OAuth ${PAGE_ACCESS_TOKEN}`, offset: '0', file_size: String(video.length) },
+    body: video,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.error || body.success === false) throw new Error(`video upload: ${JSON.stringify(body.error ?? body)}`);
+}
+
+async function postInstagramReel(video, text) {
+  const { id, uri } = await graph(`${IG_USER_ID}/media`, {
+    media_type: 'REELS',
+    upload_type: 'resumable',
+    caption: text,
+    share_to_feed: 'true',
+  });
+  await rupload(uri ?? `https://rupload.facebook.com/ig-api-upload/${GRAPH.split('/').pop()}/${id}`, video);
+  return publishInstagram(id, 60);
+}
+
+async function postFacebookReel(video, text) {
+  const { video_id, upload_url } = await graph(`${FB_PAGE_ID}/video_reels`, { upload_phase: 'start' });
+  await rupload(upload_url, video);
+  await graph(`${FB_PAGE_ID}/video_reels`, {
+    upload_phase: 'finish',
+    video_id,
+    video_state: 'PUBLISHED',
+    description: text,
+  });
+  return video_id;
 }
 
 // Uploads the story card to the Page as an unpublished photo. Facebook's story is made from
@@ -207,12 +278,32 @@ async function main() {
     '🛍️ Shop now:',
     tag ? '🛍️ Tap the photo to shop, or visit:' : '🛍️ Tap the link in our bio to shop this product, or visit:',
   );
+  const imageUrls = product.images.slice(0, 10).map((image) => jpegUrl(image.src));
+  // Alternate formats so followers see a mix: Reels reach non-followers, carousels earn swipes.
+  const format = process.env.FORMAT || (Object.keys(posted).length % 2 === 0 ? 'reel' : 'carousel');
   const storyImage = await buildStoryImage(product, imageUrl);
+  const video = format === 'reel' ? await buildReel(product, imageUrls) : null;
+  console.log(`Format: ${format}, ${imageUrls.length} photo(s)${video ? `, reel ${Math.round(video.length / 1024)} KB` : ''}`);
   if (DRY_RUN) {
     console.log(`Story card built: ${Math.round(storyImage.length / 1024)} KB`);
     if (PAGE_ACCESS_TOKEN) await checkAccess();
     return;
   }
+
+  // A carousel needs two photos; a product tag only works on a single photo.
+  const facebookGallery = () => (imageUrls.length > 1 ? postFacebookAlbum(imageUrls, text) : postToFacebook(imageUrl, text));
+  const instagramGallery = () =>
+    imageUrls.length > 1 && !tag ? postInstagramCarousel(imageUrls, igText) : postToInstagram(imageUrl, igText, tag);
+  // If a Reel fails (video processing is the flakiest step), fall back to the photos so the product still goes out.
+  const withFallback = async (name, reel, gallery) => {
+    if (!video) return gallery();
+    try {
+      return await reel();
+    } catch (err) {
+      console.log(`${name} reel failed, posting photos instead: ${err.message}`);
+      return gallery();
+    }
+  };
 
   const record = {
     product_title: product.title,
@@ -221,8 +312,12 @@ async function main() {
     price: product.variants?.[0]?.price,
     last_posted_at: new Date().toISOString(),
     cycle_number: 1,
+    format,
   };
-  const results = await Promise.allSettled([postToFacebook(imageUrl, text), postToInstagram(imageUrl, igText, tag)]);
+  const results = await Promise.allSettled([
+    withFallback('Facebook', () => postFacebookReel(video, text), facebookGallery),
+    withFallback('Instagram', () => postInstagramReel(video, igText), instagramGallery),
+  ]);
   const [facebook, instagram] = results.map((r) => (r.status === 'fulfilled' ? 'posted' : 'failed'));
   results.forEach((r, i) => {
     const name = i === 0 ? 'Facebook' : 'Instagram';

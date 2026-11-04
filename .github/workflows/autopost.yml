@@ -10,6 +10,11 @@ on:
         description: 'Preview only, do not post'
         type: boolean
         default: true
+      format:
+        description: 'Feed format (auto alternates Reel and carousel)'
+        type: choice
+        options: [auto, reel, carousel]
+        default: auto
 
 permissions:
   contents: write
@@ -30,6 +35,7 @@ jobs:
         run: node post.mjs
         env:
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          FORMAT: ${{ inputs.format != 'auto' && inputs.format || '' }}
           PAGE_ACCESS_TOKEN: ${{ secrets.PAGE_ACCESS_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}

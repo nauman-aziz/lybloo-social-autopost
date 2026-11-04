@@ -42,6 +42,20 @@ post those products again.
 Go to **Actions → Lybloo autopost → Run workflow**. With "dry run" ticked, the run only prints the post it would make.
 Untick it to post for real once. After that, the schedule runs by itself.
 
+## Feed formats and hashtags
+
+Runs alternate between two feed formats, both on Facebook and Instagram:
+
+- **Reel** (`reel.mjs`): an ~12-second 1080×1920 video. It opens on the story card, shows up to three more product
+  photos with a slow zoom, and ends on a price and "link in bio" card. It's rendered with ffmpeg and uploaded straight to
+  Meta's resumable upload host. If a Reel fails, that platform gets the photos instead.
+- **Carousel**: all the product's photos (up to 10) as one swipeable post (a multi-photo post on Facebook).
+
+To force one format on a manual run, pick it in the **format** box when you click **Run workflow**.
+
+`hashtags.mjs` picks five hashtags per product, Instagram's limit: #Lybloo, the brand, the category, the most specific
+feature (GaN, car charger and so on), and a Pakistan tag that rotates between products.
+
 ## Stories
 
 After the feed posts, `story.mjs` draws a 1080×1920 story card (product photo, name, price, "Shop now · link in bio"),
