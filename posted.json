@@ -56,5 +56,18 @@
     "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "failed"
+  },
+  "10392218992871": {
+    "product_title": "Google 45W USB-C Fast Charging Adapter",
+    "handle": "google-45w-usb-c-charger",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/google-45w-usb-c-charger-1.jpg?v=1793876546&format=pjpg",
+    "price": "4000.00",
+    "last_posted_at": "2026-11-05T12:51:27.870Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "failed",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted"
   }
 }
