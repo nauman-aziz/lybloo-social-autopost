@@ -66,7 +66,21 @@
     "cycle_number": 1,
     "format": "carousel",
     "facebook_status": "posted",
-    "instagram_status": "failed",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "instagram_retried_at": "2026-11-05T22:28:20.688Z"
+  },
+  "10392218566887": {
+    "product_title": "Romoss S10 FlashPower 130W Power Bank — 10,000mAh",
+    "handle": "romoss-ppu10-130w-power-bank-10000mah",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/romoss-ppu10-130w-power-bank-10000mah-1.jpg?v=1793876539&format=pjpg",
+    "price": "8000.00",
+    "last_posted_at": "2026-11-05T22:28:30.934Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
   }
