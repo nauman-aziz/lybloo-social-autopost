@@ -4,6 +4,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { hashtags } from './hashtags.mjs';
 import { renderLinkPage } from './links.mjs';
+import { addToFeedPage } from './shopify.mjs';
 import { buildReel } from './reel.mjs';
 import { buildStoryImage } from './story.mjs';
 
@@ -15,9 +16,25 @@ const DRY_RUN = process.env.DRY_RUN === '1';
 const { FB_PAGE_ID, IG_USER_ID } = process.env;
 let PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
+const rupees = (value) => `Rs.${Number(value).toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
+
+// Price and the store's terms go in every caption: a post with no price gets "price?"
+// comments instead of orders. The "Shop now:" line is swapped for an Instagram-specific
+// one in main(), so keep its wording in sync with the replace() there.
 function caption(product) {
+  const variant = product.variants?.[0] ?? {};
+  const price = Number(variant.price);
+  const was = Number(variant.compare_at_price);
+  const priceLine = was > price
+    ? `💰 ${rupees(price)} (was ${rupees(was)} — ${Math.round((1 - price / was) * 100)}% off)`
+    : `💰 ${rupees(price)}`;
   return [
-    `⚡ Discover ${product.title} at Lybloo!`,
+    `⚡ New at Lybloo: ${product.title}`,
+    '',
+    priceLine,
+    '📦 Cash on Delivery across Pakistan',
+    '🚚 Free delivery over Rs.2,000',
+    '🛡️ 15-day warranty',
     '',
     '🛍️ Shop now:',
     `${STORE_URL}/products/${product.handle}`,
@@ -349,6 +366,19 @@ async function main() {
     };
     await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
     await renderLinkPage(posted);
+  }
+  // The bio link opens lybloo.com/pages/instagram, a grid of the `instagram` collection in feed
+  // order, so put the product there only once it is actually on Instagram.
+  if (instagram === 'posted' && !process.env.SHOPIFY_CLIENT_SECRET) {
+    console.log('Feed page: skipped, the SHOPIFY_* secrets are not set (see README).');
+  } else if (instagram === 'posted') {
+    try {
+      await addToFeedPage(product.id);
+      console.log('Added to lybloo.com/pages/instagram');
+    } catch (err) {
+      console.log(`Feed page: FAILED ${err.message}`);
+      process.exitCode = 1;
+    }
   }
   if ([facebook, instagram, facebookStory, instagramStory].includes('failed')) process.exitCode = 1;
 }

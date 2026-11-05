@@ -65,15 +65,24 @@ image. Instagram doesn't let apps add link stickers to stories, so the card poin
 
 ## Link in bio
 
-Instagram captions can't hold clickable links. After each post, the script rebuilds `docs/index.html`: a grid of every
-posted product, newest first, each linking to its page on lybloo.com. GitHub Pages serves it at
-https://nauman-aziz.github.io/lybloo-social-autopost/. That URL is the website link in the @lybloopakistan bio, and the
-Instagram caption tells people to tap it.
+Instagram captions can't hold clickable links, so the caption tells people to tap the bio link, which should be
+https://lybloo.com/pages/instagram. That page is a grid of the Shopify collection `instagram`, newest post first, with live
+prices and stock. It was created and seeded by `E:\lybloo\scripts\shopify\98-instagram-shop.js`.
+
+After each Instagram post, `shopify.mjs` adds the product to that collection and moves it to the top. It needs three
+more repository secrets, the same values as `E:\lybloo\.env.shopify`: `SHOPIFY_STORE`, `SHOPIFY_CLIENT_ID` and
+`SHOPIFY_CLIENT_SECRET`. Without them the step is skipped and logged, and posting still works.
+
+The script also still rebuilds `docs/index.html`, the older GitHub Pages version of this grid at
+https://nauman-aziz.github.io/lybloo-social-autopost/. It copies prices at posting time, so they go stale.
 
 ## Instagram product tags
 
-Instagram captions can't hold clickable links. Instead, the script tags the product on the Instagram photo, so tapping
-it opens that product on lybloo.com. This needs:
+Not available for Lybloo as of November 2026: Meta only offers Shops and product tagging to businesses in its
+[supported countries](https://www.facebook.com/business/help/549256849084694), and Pakistan isn't one. The code stays in
+case that changes; it checks eligibility on every run and posts untagged when the account isn't eligible.
+
+When eligible, the script tags the product on the Instagram photo, so tapping it opens that product on lybloo.com. This needs:
 
 - An approved Instagram Shop for @lybloopakistan, with the Shopify catalog connected through the Shopify
   "Facebook & Instagram" sales channel (set up in Commerce Manager).
