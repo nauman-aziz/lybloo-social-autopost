@@ -64,14 +64,26 @@ async function fetchProducts() {
   return products;
 }
 
+// Instagram downloads image_url itself. Now and then the fetch gets something other than the
+// image (on 5 Nov 2026 the Google 45W carousel failed with subcode 2207052 while Facebook took the
+// same URL), so a failed media download is retried after a pause instead of losing the post.
+const MEDIA_DOWNLOAD_FAILED = 2207052;
+
 async function graph(path, params) {
-  const res = await fetch(`${GRAPH}/${path}`, {
-    method: 'POST',
-    body: new URLSearchParams({ ...params, access_token: PAGE_ACCESS_TOKEN }),
-  });
-  const body = await res.json();
-  if (!res.ok || body.error) throw new Error(`${path}: ${JSON.stringify(body.error ?? body)}`);
-  return body;
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${GRAPH}/${path}`, {
+      method: 'POST',
+      body: new URLSearchParams({ ...params, access_token: PAGE_ACCESS_TOKEN }),
+    });
+    const body = await res.json();
+    if (res.ok && !body.error) return body;
+    if (body.error?.error_subcode === MEDIA_DOWNLOAD_FAILED && attempt < 3) {
+      console.log(`${path}: Instagram couldn't fetch the media, retrying in ${attempt * 20}s`);
+      await new Promise((r) => setTimeout(r, attempt * 20000));
+      continue;
+    }
+    throw new Error(`${path}: ${JSON.stringify(body.error ?? body)}`);
+  }
 }
 
 async function postToFacebook(imageUrl, text) {
@@ -270,6 +282,38 @@ async function checkAccess() {
   }
 }
 
+// A product is recorded as posted once either platform has it, so a run where Facebook worked
+// and Instagram didn't would otherwise leave it off Instagram for good. Each run first gives the
+// oldest such product one more Instagram feed post (photos; the Reel isn't rebuilt).
+async function retryMissedInstagram(posted, products) {
+  const [id] = Object.entries(posted)
+    .filter(([, record]) => record.instagram_status === 'failed')
+    .sort(([, a], [, b]) => (a.last_posted_at ?? '').localeCompare(b.last_posted_at ?? ''))
+    .map(([key]) => key);
+  const product = id && products.find((p) => String(p.id) === id && p.published_at && p.images?.length);
+  if (!product) return;
+
+  if (PAGE_ACCESS_TOKEN) await usePageToken();
+  const igText = caption(product).replace('🛍️ Shop now:', '🛍️ Tap the link in our bio to shop this product, or visit:');
+  const imageUrls = product.images.slice(0, 10).map((image) => jpegUrl(image.src));
+  console.log(`Retrying Instagram for "${product.title}" (${product.id}), which reached Facebook only.`);
+  try {
+    const mediaId = imageUrls.length > 1 ? await postInstagramCarousel(imageUrls, igText) : await postToInstagram(imageUrls[0], igText, null);
+    console.log(`Instagram retry: posted ${mediaId}`);
+    posted[id] = { ...posted[id], instagram_status: 'posted', instagram_retried_at: new Date().toISOString() };
+    await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
+    if (process.env.SHOPIFY_CLIENT_SECRET) {
+      await addToFeedPage(product.id).then(
+        () => console.log('Added to lybloo.com/pages/instagram'),
+        (err) => console.log(`Feed page: FAILED ${err.message}`),
+      );
+    }
+  } catch (err) {
+    console.log(`Instagram retry: FAILED ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
 async function main() {
   if (!DRY_RUN && !(PAGE_ACCESS_TOKEN && FB_PAGE_ID && IG_USER_ID)) {
     throw new Error('Set PAGE_ACCESS_TOKEN, FB_PAGE_ID and IG_USER_ID (or DRY_RUN=1).');
@@ -277,6 +321,7 @@ async function main() {
 
   const posted = JSON.parse(await readFile(STATE_FILE, 'utf8').catch(() => '{}'));
   const products = await fetchProducts();
+  if (!DRY_RUN) await retryMissedInstagram(posted, products);
   const product = products.find((p) => p.published_at && p.images?.length && !posted[p.id]);
 
   console.log(`${products.length} products, ${Object.keys(posted).length} already posted.`);
