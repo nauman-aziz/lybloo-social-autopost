@@ -93,9 +93,10 @@
     "cycle_number": 1,
     "format": "carousel",
     "facebook_status": "posted",
-    "instagram_status": "failed",
+    "instagram_status": "posted",
     "facebook_story_status": "posted",
-    "instagram_story_status": "posted"
+    "instagram_story_status": "posted",
+    "instagram_retried_at": "2026-11-07T11:25:47.632Z"
   },
   "10392217845991": {
     "product_title": "Samsung Type-C OTG Adapter — USB-C to USB-A, White",
@@ -105,6 +106,19 @@
     "last_posted_at": "2026-11-06T21:54:14.206Z",
     "cycle_number": 1,
     "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted"
+  },
+  "10392217551079": {
+    "product_title": "Anker 322 Braided USB-C to USB-C Cable 60W — White (A81F6)",
+    "handle": "anker-322-usb-c-to-usb-c-cable-60w-white",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/anker-322-usb-c-to-usb-c-cable-60w-white-1.jpg?v=1793876489&format=pjpg",
+    "price": "1250.00",
+    "last_posted_at": "2026-11-07T11:25:50.083Z",
+    "cycle_number": 1,
+    "format": "carousel",
     "facebook_status": "posted",
     "instagram_status": "posted",
     "facebook_story_status": "posted",
