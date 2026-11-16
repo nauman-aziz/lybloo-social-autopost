@@ -344,5 +344,18 @@
     "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
+  },
+  "10335297994983": {
+    "product_title": "Vivo 44W Original Adapter",
+    "handle": "vivo-44w-original-adapter",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/vivo-44w-original-adapter-1.jpg?v=1791194143&format=pjpg",
+    "price": "3500.00",
+    "last_posted_at": "2026-11-16T13:15:03.162Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "failed",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted"
   }
 }
