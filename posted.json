@@ -381,7 +381,21 @@
     "cycle_number": 1,
     "format": "carousel",
     "facebook_status": "posted",
-    "instagram_status": "failed",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "instagram_retried_at": "2026-11-17T23:43:46.442Z"
+  },
+  "10335294062823": {
+    "product_title": "Xiaomi 67W Charger with Cable — 2-Pin Flat Plug",
+    "handle": "xiaomi-67w-charger",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/xiaomi-67w-charger-1.jpg?v=1793875773&format=pjpg",
+    "price": "4500.00",
+    "last_posted_at": "2026-11-17T23:43:51.936Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
   }
