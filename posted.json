@@ -371,5 +371,18 @@
     "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
+  },
+  "10335294095591": {
+    "product_title": "Skullcandy Jib Wired Earphones — 3.5mm",
+    "handle": "skullcandy-jib-wired-earphones",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/skullcandy-jib-wired-earphones-1.jpg?v=1791193762&format=pjpg",
+    "price": "499.00",
+    "last_posted_at": "2026-11-17T13:59:04.424Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "failed",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted"
   }
 }
