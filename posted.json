@@ -354,7 +354,21 @@
     "cycle_number": 1,
     "format": "carousel",
     "facebook_status": "posted",
-    "instagram_status": "failed",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "instagram_retried_at": "2026-11-17T00:35:01.421Z"
+  },
+  "10335297896679": {
+    "product_title": "Romoss AC65MC 65W GaN Charger — 3 Ports",
+    "handle": "romoss-ac65mc-65w-gan-charger",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/romoss-ac65mc-65w-gan-charger-1.jpg?v=1791194122&format=pjpg",
+    "price": "3500.00",
+    "last_posted_at": "2026-11-17T00:35:09.162Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
     "facebook_story_status": "posted",
     "instagram_story_status": "posted"
   }
