@@ -1,6 +1,10 @@
-// Sends each product's vertical video to the Lybloo TikTok inbox as a draft. Unaudited TikTok apps
-// can't publish publicly, so a person opens TikTok, pastes the caption from docs/tiktok.html and
-// taps Post.
+// Prepares a TikTok photo post for each product (story card, product photos, price card) with its
+// title and description filled in, and sends it to the Lybloo TikTok inbox. Unaudited TikTok apps
+// can't publish publicly, so a person opens the notification and taps Post.
+//
+// TikTok only pulls photos from a verified URL prefix, so the post runs in two halves: post.mjs
+// writes the photos under docs/tiktok/ plus tiktok-pending.json, the workflow publishes them to
+// GitHub Pages, and `node tiktok.mjs send-pending` waits for them to be live and sends the post.
 //
 // TikTok access tokens last 24 hours and each refresh may hand back a new refresh token. The
 // workflow can't rewrite GitHub secrets, so the refresh token lives in tiktok-state.enc, encrypted
@@ -9,13 +13,20 @@
 // One-time connect: open docs/tiktok-connect.html, approve, then run the workflow with the code
 // it shows in the "tiktok_code" box.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { hashtags } from './hashtags.mjs';
+import { ctaSlide, photoSlide } from './reel.mjs';
+import { buildStoryImage } from './story.mjs';
 
 const API = 'https://open.tiktokapis.com/v2';
 const STATE_FILE = new URL('./tiktok-state.enc', import.meta.url);
-const CAPTIONS_PAGE = new URL('./docs/tiktok.html', import.meta.url);
+const PENDING_FILE = new URL('./tiktok-pending.json', import.meta.url);
+const POSTED_FILE = new URL('./posted.json', import.meta.url);
+const PHOTOS_DIR = new URL('./docs/tiktok/', import.meta.url);
+const PHOTOS_URL = 'https://nauman-aziz.github.io/lybloo-social-autopost/tiktok/';
 export const REDIRECT_URI = 'https://nauman-aziz.github.io/lybloo-social-autopost/tiktok-connect.html';
-const MAX_CAPTIONS = 20;
+const MAX_PRODUCT_PHOTOS = 8;
+const KEEP_PHOTO_SETS = 6;
 
 // Trimmed because a secret pasted from the developer portal easily picks up a trailing space or newline.
 const TIKTOK_CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY?.trim();
@@ -85,94 +96,124 @@ async function api(token, path, body) {
   return json.data;
 }
 
-// Uploads the video in one chunk (TikTok allows a single chunk up to 64 MB) and waits until
-// TikTok has delivered it to the inbox.
-export async function sendDraft(video) {
+// The store's product copy, as plain lines: specs, what's in the box, delivery terms.
+function details(product) {
+  return (product.body_html ?? '')
+    .replace(/<li[^>]*>/g, '\n• ')
+    .replace(/<\/(p|h\d|li|div)>|<br\s*\/?>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/&quot;/g, '"')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function caption(product) {
+  const price = product.variants?.[0]?.price;
+  const priceText = price ? `💰 Rs ${Number(price).toLocaleString('en-PK', { maximumFractionDigits: 0 })}` : '';
+  const description = [
+    `⚡ ${product.title}`,
+    priceText,
+    '',
+    ...details(product),
+    '',
+    '🛍️ Order from the link in our bio',
+    '',
+    hashtags(product),
+  ]
+    .filter((line, i, lines) => line || lines[i - 1])
+    .join('\n');
+  // TikTok caps photo titles at 90 characters and descriptions at 4000.
+  return { title: product.title.slice(0, 90), description: description.slice(0, 4000) };
+}
+
+// Writes the photo set into docs/tiktok/<product id>/ and records it in tiktok-pending.json for
+// `send-pending` once the workflow has published it.
+export async function preparePhotoPost(product, imageUrls) {
+  const photos = [
+    await buildStoryImage(product, imageUrls[0]),
+    ...(await Promise.all(imageUrls.slice(1, 1 + MAX_PRODUCT_PHOTOS).map((url) => photoSlide(url, product.vendor ?? 'Lybloo')))),
+    await ctaSlide(product),
+  ];
+  const dir = new URL(`${product.id}/`, PHOTOS_DIR);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  const urls = [];
+  for (const [i, photo] of photos.entries()) {
+    const name = `${String(i + 1).padStart(2, '0')}.jpg`;
+    await writeFile(new URL(name, dir), photo);
+    urls.push(`${PHOTOS_URL}${product.id}/${name}`);
+  }
+  await writeFile(PENDING_FILE, JSON.stringify({ product_id: String(product.id), urls, ...caption(product) }, null, 2));
+  console.log(`TikTok: prepared ${urls.length} photos, sent once published`);
+  return caption(product);
+}
+
+// GitHub Pages takes a minute or two to publish a push.
+async function waitUntilLive(urls) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const live = await Promise.all(urls.map((url) => fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false)));
+    if (live.every(Boolean)) return;
+    await new Promise((r) => setTimeout(r, 15000));
+  }
+  throw new Error('photos did not appear on GitHub Pages within 10 minutes');
+}
+
+async function sendPhotoPost({ urls, title, description }) {
   const token = await accessToken();
-  const { publish_id, upload_url } = await api(token, '/post/publish/inbox/video/init/', {
-    source_info: { source: 'FILE_UPLOAD', video_size: video.length, chunk_size: video.length, total_chunk_count: 1 },
+  const { publish_id } = await api(token, '/post/publish/content/init/', {
+    post_mode: 'MEDIA_UPLOAD',
+    media_type: 'PHOTO',
+    post_info: { title, description },
+    source_info: { source: 'PULL_FROM_URL', photo_cover_index: 0, photo_images: urls },
   });
-
-  const put = await fetch(upload_url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'video/mp4',
-      'Content-Length': String(video.length),
-      'Content-Range': `bytes 0-${video.length - 1}/${video.length}`,
-    },
-    body: video,
-  });
-  if (!put.ok) throw new Error(`TikTok upload: HTTP ${put.status} ${await put.text()}`);
-
   for (let attempt = 0; attempt < 24; attempt++) {
     const { status, fail_reason } = await api(token, '/post/publish/status/fetch/', { publish_id });
     if (status === 'SEND_TO_USER_INBOX' || status === 'PUBLISH_COMPLETE') return publish_id;
-    if (status === 'FAILED') throw new Error(`TikTok draft failed: ${fail_reason}`);
+    if (status === 'FAILED') throw new Error(`TikTok photo post failed: ${fail_reason}`);
     await new Promise((r) => setTimeout(r, 5000));
   }
-  throw new Error(`TikTok draft ${publish_id} still processing after 2 minutes`);
+  throw new Error(`TikTok photo post ${publish_id} still processing after 2 minutes`);
 }
 
-const escape = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-
-// Inbox drafts can't carry a caption, so this page lists each one with a copy button.
-export async function renderCaptionsPage(posted) {
-  const items = Object.values(posted)
-    .filter((item) => item.tiktok_caption)
-    .sort((a, b) => (b.last_posted_at ?? '').localeCompare(a.last_posted_at ?? ''))
-    .slice(0, MAX_CAPTIONS);
-
-  const cards = items
-    .map(
-      (item, i) => `
-    <article>
-      <h2>${escape(item.product_title)}</h2>
-      <p class="when">Sent ${escape(new Date(item.last_posted_at).toLocaleString('en-PK', { timeZone: 'Asia/Karachi', dateStyle: 'medium', timeStyle: 'short' }))}${item.tiktok_status === 'sent' ? '' : ' · draft not sent'}</p>
-      <textarea id="c${i}" readonly rows="7">${escape(item.tiktok_caption)}</textarea>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('c${i}').value).then(() => { this.textContent = 'Copied ✓'; })">Copy caption</button>
-    </article>`,
-    )
-    .join('');
-
-  await mkdir(new URL('./', CAPTIONS_PAGE), { recursive: true });
-  await writeFile(
-    CAPTIONS_PAGE,
-    `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>TikTok Captions · Lybloo</title>
-  <style>
-    :root { --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --muted: #6e6e73; --accent: #0066cc; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #000; --card: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --accent: #2997ff; } }
-    * { box-sizing: border-box; margin: 0; }
-    body { background: var(--bg); color: var(--text); font-family: Inter, -apple-system, system-ui, sans-serif; }
-    main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
-    h1 { font-size: 24px; } .lead { color: var(--muted); margin: 6px 0 20px; font-size: 15px; }
-    article { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
-    h2 { font-size: 16px; } .when { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
-    textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px; border-radius: 10px; border: 1px solid #d2d2d7; background: transparent; color: inherit; resize: none; }
-    button { margin-top: 10px; width: 100%; padding: 12px; border: 0; border-radius: 980px; background: var(--accent); color: #fff; font-weight: 600; font-size: 15px; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>TikTok captions</h1>
-    <p class="lead">Open the draft in TikTok, copy its caption here, paste it, and tap Post. Newest first.</p>
-    ${cards || '<p class="lead">No drafts sent yet.</p>'}
-  </main>
-</body>
-</html>
-`,
-  );
+// Only the newest photo sets stay published; TikTok has copied them by the next run.
+async function pruneOldPhotos(keepId) {
+  const dirs = await readdir(PHOTOS_DIR).catch(() => []);
+  const posted = JSON.parse(await readFile(POSTED_FILE, 'utf8').catch(() => '{}'));
+  const age = (id) => posted[id]?.last_posted_at ?? '';
+  const stale = dirs.filter((id) => id !== keepId).sort((a, b) => age(b).localeCompare(age(a))).slice(KEEP_PHOTO_SETS - 1);
+  for (const id of stale) await rm(new URL(`${id}/`, PHOTOS_DIR), { recursive: true, force: true });
 }
 
-// `node tiktok.mjs connect <code>` is what the workflow runs when a code is pasted into it.
-if (process.argv[2] === 'connect') {
-  connect(process.argv[3]).catch((err) => {
+export async function sendPending() {
+  const pending = JSON.parse(await readFile(PENDING_FILE, 'utf8'));
+  let status = 'failed';
+  try {
+    await waitUntilLive(pending.urls);
+    const id = await sendPhotoPost(pending);
+    console.log(`TikTok: photo post sent to the inbox (${pending.urls.length} photos) ${id}`);
+    status = 'sent';
+  } catch (err) {
+    console.log(`TikTok: FAILED ${err.message}`);
+  }
+  const posted = JSON.parse(await readFile(POSTED_FILE, 'utf8'));
+  if (posted[pending.product_id]) {
+    posted[pending.product_id].tiktok_status = status;
+    await writeFile(POSTED_FILE, JSON.stringify(posted, null, 2) + '\n');
+  }
+  await rm(PENDING_FILE, { force: true });
+  await pruneOldPhotos(pending.product_id);
+  if (status === 'failed') process.exitCode = 1;
+}
+
+// `connect <code>` runs when a code is pasted into the workflow; `send-pending` runs after the
+// photos are published.
+const command = process.argv[2];
+if (command === 'connect' || command === 'send-pending') {
+  (command === 'connect' ? connect(process.argv[3]) : sendPending()).catch((err) => {
     console.error(err.message);
     process.exitCode = 1;
   });

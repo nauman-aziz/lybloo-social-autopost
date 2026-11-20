@@ -63,11 +63,17 @@ keeping everything clear of the areas Instagram covers at the top and bottom of 
 as an unpublished photo, posted as a Facebook Page story, and Instagram makes its story from Facebook's copy of the
 image. Instagram doesn't let apps add link stickers to stories, so the card points to the bio link instead.
 
-## TikTok (drafts)
+## TikTok (photo posts, one tap)
 
-TikTok only lets apps that pass its Content Posting audit publish publicly, so `tiktok.mjs` sends each product's
-vertical video to the Lybloo TikTok **inbox as a draft** instead. Open TikTok, copy the caption from
-https://nauman-aziz.github.io/lybloo-social-autopost/tiktok.html, paste it, and tap Post.
+TikTok only lets apps that pass its Content Posting audit publish publicly, so `tiktok.mjs` sends each product to the
+Lybloo TikTok **inbox as a ready photo post**: the story card, up to 8 product photos and a price card, all 9:16, with
+the title and description (price, the store's product details, link in bio, hashtags) already filled in. Open the
+TikTok notification and tap Post.
+
+TikTok only pulls photos from a verified URL prefix, and `https://nauman-aziz.github.io/lybloo-social-autopost/` is
+verified (the `docs/tiktok*.txt` signature file must stay). So `post.mjs` writes the photos under `docs/tiktok/` and
+`tiktok-pending.json`, the workflow pushes them to GitHub Pages, and `node tiktok.mjs send-pending` waits until they're
+live and sends the post. Only the newest six photo sets are kept.
 
 Setup, once:
 
@@ -83,7 +89,7 @@ Setup, once:
 TikTok access tokens last a day, and a refresh can return a new refresh token. The workflow can't update GitHub secrets,
 so the login is kept in `tiktok-state.enc`, encrypted with a key derived from `TIKTOK_CLIENT_SECRET`, and committed
 after every run. The login lasts a year without use; each run refreshes it. To try TikTok on its own, tick
-**tiktok_test** when running the workflow: it sends a draft of the last posted product and posts nothing else.
+**tiktok_test** when running the workflow: it sends a photo post of the last posted product and posts nothing else.
 
 ## Link in bio
 

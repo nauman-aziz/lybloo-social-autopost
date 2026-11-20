@@ -71,3 +71,16 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add posted.json docs $(ls tiktok-state.enc 2>/dev/null)
           git diff --cached --quiet || (git commit -m "Record posted product" && git push)
+      # TikTok pulls photos from the verified GitHub Pages URL, so they have to be published (the
+      # push above) before the post is sent.
+      - name: Send TikTok photo post
+        if: always() && hashFiles('tiktok-pending.json') != ''
+        run: node tiktok.mjs send-pending
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      - name: Save TikTok status
+        if: always() && hashFiles('tiktok-pending.json') == '' && hashFiles('tiktok-state.enc') != ''
+        run: |
+          git add -A posted.json docs tiktok-state.enc
+          git diff --cached --quiet || (git commit -m "Record TikTok post" && git pull --rebase && git push)

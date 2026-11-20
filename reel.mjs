@@ -35,7 +35,7 @@ function background(svg) {
   ]);
 }
 
-async function photoSlide(imageUrl, vendor) {
+export async function photoSlide(imageUrl, vendor) {
   const size = 900;
   const photo = await sharp(await download(imageUrl))
     .resize(size - 80, size - 80, { fit: 'contain', background: '#ffffff' })
@@ -53,7 +53,7 @@ async function photoSlide(imageUrl, vendor) {
     .toBuffer();
 }
 
-async function ctaSlide(product) {
+export async function ctaSlide(product) {
   const price = product.variants?.[0]?.price;
   const priceText = price ? `Rs ${Number(price).toLocaleString('en-PK', { maximumFractionDigits: 0 })}` : '';
   return background(`
