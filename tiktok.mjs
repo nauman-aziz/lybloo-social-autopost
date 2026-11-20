@@ -17,7 +17,9 @@ const CAPTIONS_PAGE = new URL('./docs/tiktok.html', import.meta.url);
 export const REDIRECT_URI = 'https://nauman-aziz.github.io/lybloo-social-autopost/tiktok-connect.html';
 const MAX_CAPTIONS = 20;
 
-const { TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET } = process.env;
+// Trimmed because a secret pasted from the developer portal easily picks up a trailing space or newline.
+const TIKTOK_CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY?.trim();
+const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET?.trim();
 export const tiktokConfigured = () => Boolean(TIKTOK_CLIENT_KEY && TIKTOK_CLIENT_SECRET);
 
 const key = () => createHash('sha256').update(`lybloo-tiktok:${TIKTOK_CLIENT_SECRET}`).digest();
