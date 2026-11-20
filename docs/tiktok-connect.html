@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Connect TikTok · Lybloo</title>
+  <style>
+    :root { --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --muted: #6e6e73; --accent: #0066cc; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000; --card: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --accent: #2997ff; } }
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--bg); color: var(--text); font-family: Inter, -apple-system, system-ui, sans-serif; }
+    main { max-width: 560px; margin: 0 auto; padding: 48px 16px; }
+    .card { background: var(--card); border-radius: 18px; padding: 24px; }
+    h1 { font-size: 24px; margin-bottom: 8px; } p { color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+    a.button, button { display: block; text-align: center; width: 100%; padding: 14px; border: 0; border-radius: 980px; background: var(--accent); color: #fff; font-weight: 600; font-size: 16px; text-decoration: none; }
+    code { display: block; word-break: break-all; padding: 12px; border-radius: 10px; background: var(--bg); margin-bottom: 12px; font-size: 13px; }
+    .error { color: #d70015; }
+  </style>
+</head>
+<body>
+  <main><div class="card" id="card"></div></main>
+  <script>
+    // The client key is TikTok's public app id (it appears in the login URL anyway); the secret
+    // never comes near this page.
+    const CLIENT_KEY = 'TIKTOK_CLIENT_KEY_HERE';
+    const REDIRECT_URI = location.origin + location.pathname;
+    const card = document.getElementById('card');
+    const params = new URLSearchParams(location.search);
+    const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    if (params.get('code')) {
+      let expected = null;
+      try { expected = sessionStorage.getItem('tiktok_state'); } catch {}
+      if (expected && params.get('state') !== expected) {
+        card.innerHTML = '<h1>Something went wrong</h1><p class="error">This login response did not come from the button on this page. Start again.</p>';
+      } else {
+        const code = params.get('code');
+        card.innerHTML = `<h1>Almost done</h1>
+          <p>Copy this code and paste it into the <b>tiktok_code</b> box when you run the Lybloo autopost workflow on GitHub. It works once and expires in a few minutes.</p>
+          <code id="code">${escape(code)}</code>
+          <button id="copy">Copy code</button>`;
+        document.getElementById('copy').onclick = (e) =>
+          navigator.clipboard.writeText(code).then(() => { e.target.textContent = 'Copied ✓'; });
+      }
+    } else if (params.get('error')) {
+      card.innerHTML = `<h1>TikTok said no</h1><p class="error">${escape(params.get('error_description') || params.get('error'))}</p>`;
+    } else {
+      const state = crypto.randomUUID();
+      try { sessionStorage.setItem('tiktok_state', state); } catch {}
+      const url = 'https://www.tiktok.com/v2/auth/authorize/?' + new URLSearchParams({
+        client_key: CLIENT_KEY, response_type: 'code', scope: 'user.info.basic,video.upload', redirect_uri: REDIRECT_URI, state,
+      });
+      card.innerHTML = `<h1>Connect TikTok</h1>
+        <p>Log in with the Lybloo TikTok account and allow <b>Lybloo Autopost</b> to send videos to your drafts.</p>
+        <a class="button" href="${url}">Connect TikTok</a>`;
+    }
+  </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import { renderLinkPage } from './links.mjs';
 import { addToFeedPage } from './shopify.mjs';
 import { buildReel } from './reel.mjs';
 import { buildStoryImage } from './story.mjs';
+import { renderCaptionsPage, sendDraft, tiktokConfigured } from './tiktok.mjs';
 
 const STORE_URL = 'https://lybloo.com';
 const STATE_FILE = new URL('./posted.json', import.meta.url);
@@ -400,6 +401,8 @@ async function main() {
     console.log(`Stories: FAILED ${err.message}`);
   }
 
+  const tiktok = tiktokConfigured() ? await sendTikTokDraft(video ?? (await buildReel(product, imageUrls))) : 'off';
+
   // Record the product if either platform got it, so a one-sided failure doesn't double-post the other.
   if (facebook === 'posted' || instagram === 'posted') {
     posted[product.id] = {
@@ -408,9 +411,11 @@ async function main() {
       instagram_status: instagram,
       facebook_story_status: facebookStory,
       instagram_story_status: instagramStory,
+      ...(tiktok !== 'off' && { tiktok_status: tiktok, tiktok_caption: tiktokCaption(product) }),
     };
     await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
     await renderLinkPage(posted);
+    if (tiktok !== 'off') await renderCaptionsPage(posted);
   }
   // The bio link opens lybloo.com/pages/instagram, a grid of the `instagram` collection in feed
   // order, so put the product there only once it is actually on Instagram.
@@ -425,10 +430,48 @@ async function main() {
       process.exitCode = 1;
     }
   }
-  if ([facebook, instagram, facebookStory, instagramStory].includes('failed')) process.exitCode = 1;
+  if ([facebook, instagram, facebookStory, instagramStory, tiktok].includes('failed')) process.exitCode = 1;
 }
 
-main().catch((err) => {
+// TikTok captions aren't clickable either, and drafts arrive without one, so this is what the
+// captions page offers to copy.
+function tiktokCaption(product) {
+  return [
+    `⚡ ${product.title} — now at Lybloo!`,
+    '',
+    '🛍️ Shop it from the link in our bio',
+    '',
+    hashtags(product),
+  ].join('\n');
+}
+
+async function sendTikTokDraft(video) {
+  try {
+    const id = await sendDraft(video);
+    console.log(`TikTok: draft sent ${id}`);
+    return 'sent';
+  } catch (err) {
+    console.log(`TikTok: FAILED ${err.message}`);
+    return 'failed';
+  }
+}
+
+// TIKTOK_TEST=1 sends only a TikTok draft of the most recently posted product, touching nothing else.
+async function tiktokTest() {
+  const posted = JSON.parse(await readFile(STATE_FILE, 'utf8'));
+  const [id, record] = Object.entries(posted).sort(([, a], [, b]) => b.last_posted_at.localeCompare(a.last_posted_at))[0];
+  const product = (await fetchProducts()).find((p) => String(p.id) === id);
+  if (!product) throw new Error(`Product ${id} is no longer in the store`);
+  console.log(`TikTok test with "${product.title}"`);
+  const video = await buildReel(product, product.images.slice(0, 10).map((image) => jpegUrl(image.src)));
+  const status = await sendTikTokDraft(video);
+  posted[id] = { ...record, tiktok_status: status, tiktok_caption: tiktokCaption(product) };
+  await writeFile(STATE_FILE, JSON.stringify(posted, null, 2) + '\n');
+  await renderCaptionsPage(posted);
+  if (status === 'failed') process.exitCode = 1;
+}
+
+(process.env.TIKTOK_TEST === '1' ? tiktokTest() : main()).catch((err) => {
   console.error(err.message);
   process.exitCode = 1;
 });

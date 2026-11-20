@@ -63,6 +63,28 @@ keeping everything clear of the areas Instagram covers at the top and bottom of 
 as an unpublished photo, posted as a Facebook Page story, and Instagram makes its story from Facebook's copy of the
 image. Instagram doesn't let apps add link stickers to stories, so the card points to the bio link instead.
 
+## TikTok (drafts)
+
+TikTok only lets apps that pass its Content Posting audit publish publicly, so `tiktok.mjs` sends each product's
+vertical video to the Lybloo TikTok **inbox as a draft** instead. Open TikTok, copy the caption from
+https://nauman-aziz.github.io/lybloo-social-autopost/tiktok.html, paste it, and tap Post.
+
+Setup, once:
+
+1. Create an app at https://developers.tiktok.com with **Login Kit** and the **Content Posting API**, scopes
+   `user.info.basic` and `video.upload`, and the redirect URI
+   `https://nauman-aziz.github.io/lybloo-social-autopost/tiktok-connect.html`. Add the Lybloo TikTok account as a
+   sandbox target user.
+2. Add its client key and secret as the `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` repository secrets, and put the
+   client key in `docs/tiktok-connect.html`.
+3. Open the connect page, approve, copy the code, and run the workflow with it in **tiktok_code**. That run only
+   connects TikTok and writes `tiktok-state.enc`.
+
+TikTok access tokens last a day, and a refresh can return a new refresh token. The workflow can't update GitHub secrets,
+so the login is kept in `tiktok-state.enc`, encrypted with a key derived from `TIKTOK_CLIENT_SECRET`, and committed
+after every run. The login lasts a year without use; each run refreshes it. To try TikTok on its own, tick
+**tiktok_test** when running the workflow: it sends a draft of the last posted product and posts nothing else.
+
 ## Link in bio
 
 Instagram captions can't hold clickable links, so the caption tells people to tap the bio link, which should be

@@ -15,6 +15,14 @@ on:
         type: choice
         options: [auto, reel, carousel]
         default: auto
+      tiktok_test:
+        description: 'Only send a TikTok draft of the latest product (posts nothing else)'
+        type: boolean
+        default: false
+      tiktok_code:
+        description: 'One-time TikTok code from the connect page (connects TikTok, posts nothing)'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -31,10 +39,23 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - name: Connect TikTok
+        if: inputs.tiktok_code != ''
+        run: |
+          echo "::add-mask::$CODE"
+          node tiktok.mjs connect "$CODE"
+        env:
+          CODE: ${{ inputs.tiktok_code }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
       - name: Post next product
+        if: inputs.tiktok_code == ''
         run: node post.mjs
         env:
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          TIKTOK_TEST: ${{ inputs.tiktok_test && '1' || '0' }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
           FORMAT: ${{ inputs.format != 'auto' && inputs.format || '' }}
           PAGE_ACCESS_TOKEN: ${{ secrets.PAGE_ACCESS_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
@@ -48,5 +69,5 @@ jobs:
         run: |
           git config user.name "lybloo-autopost"
           git config user.email "actions@users.noreply.github.com"
-          git add posted.json docs
+          git add posted.json docs $(ls tiktok-state.enc 2>/dev/null)
           git diff --cached --quiet || (git commit -m "Record posted product" && git push)
