@@ -120,7 +120,8 @@ function caption(product) {
     '',
     ...details(product),
     '',
-    '🛍️ Order from the link in our bio',
+    '🛍️ Order from the link in our bio, or visit:',
+    `https://lybloo.com/products/${product.handle}`,
     '',
     hashtags(product),
   ]
