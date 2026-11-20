@@ -1,5 +1,5 @@
 // Builds the 1080x1920 story card for a product: the square product photo on a white card,
-// with its name, price and a "link in bio" prompt, since API stories can't carry link stickers.
+// with its name, price and a "lybloo.com" prompt, since API stories can't carry link stickers.
 import sharp from 'sharp';
 
 const WIDTH = 1080;
@@ -64,7 +64,7 @@ export async function buildStoryImage(product, imageUrl) {
     .join('\n  ')}
   ${priceText ? `<text x="${WIDTH / 2}" y="${priceTop}" text-anchor="middle" font-size="42" fill="#6e6e73">${escape(priceText)}</text>` : ''}
   <rect x="${WIDTH / 2 - 310}" y="${pillTop}" width="620" height="100" rx="50" fill="${ACCENT}"/>
-  <text x="${WIDTH / 2}" y="${pillTop + 64}" text-anchor="middle" font-size="38" font-weight="700" fill="#ffffff">Shop now · link in bio</text>
+  <text x="${WIDTH / 2}" y="${pillTop + 64}" text-anchor="middle" font-size="38" font-weight="700" fill="#ffffff">Shop now · lybloo.com</text>
 </svg>`;
 
   return sharp({ create: { width: WIDTH, height: HEIGHT, channels: 3, background: '#f5f5f7' } })

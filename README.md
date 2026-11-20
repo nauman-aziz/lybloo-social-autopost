@@ -47,7 +47,7 @@ Untick it to post for real once. After that, the schedule runs by itself.
 Runs alternate between two feed formats, both on Facebook and Instagram:
 
 - **Reel** (`reel.mjs`): an ~12-second 1080×1920 video. It opens on the story card, shows up to three more product
-  photos with a slow zoom, and ends on a price and "link in bio" card. It's rendered with ffmpeg and uploaded straight to
+  photos with a slow zoom, and ends on a price and "lybloo.com" card. It's rendered with ffmpeg and uploaded straight to
   Meta's resumable upload host. If a Reel fails, that platform gets the photos instead.
 - **Carousel**: all the product's photos (up to 10) as one swipeable post (a multi-photo post on Facebook).
 
@@ -58,16 +58,16 @@ feature (GaN, car charger and so on), and a Pakistan tag that rotates between pr
 
 ## Stories
 
-After the feed posts, `story.mjs` draws a 1080×1920 story card (product photo, name, price, "Shop now · link in bio"),
+After the feed posts, `story.mjs` draws a 1080×1920 story card (product photo, name, price, "Shop now · lybloo.com"),
 keeping everything clear of the areas Instagram covers at the top and bottom of a story. The card is uploaded to the Page
 as an unpublished photo, posted as a Facebook Page story, and Instagram makes its story from Facebook's copy of the
-image. Instagram doesn't let apps add link stickers to stories, so the card points to the bio link instead.
+image. Instagram doesn't let apps add link stickers to stories, so the card points to lybloo.com instead.
 
 ## TikTok (photo posts, one tap)
 
 TikTok only lets apps that pass its Content Posting audit publish publicly, so `tiktok.mjs` sends each product to the
 Lybloo TikTok **inbox as a ready photo post**: the story card, up to 8 product photos and a price card, all 9:16, with
-the title and description (price, the store's product details, link in bio, hashtags) already filled in. Open the
+the title and description (price, the store's product details, product link on lybloo.com, hashtags) already filled in. Open the
 TikTok notification and tap Post.
 
 TikTok only pulls photos from a verified URL prefix, and `https://nauman-aziz.github.io/lybloo-social-autopost/` is

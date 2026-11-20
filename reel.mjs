@@ -60,8 +60,8 @@ export async function ctaSlide(product) {
     <text x="${WIDTH / 2}" y="640" text-anchor="middle" font-family="${FONT}" font-size="64" font-weight="700" fill="#1d1d1f">Lybloo</text>
     ${priceText ? `<text x="${WIDTH / 2}" y="900" text-anchor="middle" font-family="${FONT}" font-size="120" font-weight="700" fill="#1d1d1f" letter-spacing="-2">${escape(priceText)}</text>` : ''}
     <rect x="${WIDTH / 2 - 330}" y="1120" width="660" height="110" rx="55" fill="${ACCENT}"/>
-    <text x="${WIDTH / 2}" y="1190" text-anchor="middle" font-family="${FONT}" font-size="42" font-weight="700" fill="#ffffff">Shop now · link in bio</text>
-    <text x="${WIDTH / 2}" y="1300" text-anchor="middle" font-family="${FONT}" font-size="36" fill="#6e6e73">lybloo.com</text>`)
+    <text x="${WIDTH / 2}" y="1190" text-anchor="middle" font-family="${FONT}" font-size="42" font-weight="700" fill="#ffffff">Shop now · lybloo.com</text>
+    `)
     .jpeg({ quality: 90 })
     .toBuffer();
 }
