@@ -120,7 +120,9 @@ function caption(product) {
     '',
     ...details(product),
     '',
-    '🛍️ Order from the link in our bio, or visit:',
+    // TikTok won't show a website link on the profile until the business is verified, so point
+    // straight at the store instead of a bio link.
+    '🛍️ Order now on lybloo.com:',
     `https://lybloo.com/products/${product.handle}`,
     '',
     hashtags(product),
