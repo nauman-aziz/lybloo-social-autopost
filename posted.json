@@ -480,5 +480,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10334288117991": {
+    "product_title": "Mi 120W Charging Combo — Adapter and Type-A Cable",
+    "handle": "mi-120w-charging-combo",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/mi-120w-charging-combo-1.jpg?v=1791139758&format=pjpg",
+    "price": "7500.00",
+    "last_posted_at": "2026-11-21T13:09:27.113Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
