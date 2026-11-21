@@ -494,5 +494,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10334287954151": {
+    "product_title": "Google 30W USB-C Fast Charging Adapter",
+    "handle": "google-30w-usb-c-charger",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/google-30w-usb-c-charger-1.jpg?v=1791139754&format=pjpg",
+    "price": "3000.00",
+    "last_posted_at": "2026-11-21T21:57:39.122Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
