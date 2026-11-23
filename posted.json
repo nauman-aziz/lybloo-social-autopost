@@ -536,5 +536,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10334287593703": {
+    "product_title": "Xiaomi 120W 6A USB-A to USB-C Cable",
+    "handle": "xiaomi-120w-6a-usb-a-to-usb-c-cable",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/xiaomi-120w-10a-usb-a-to-usb-c-cable-1.jpg?v=1791139736&format=pjpg",
+    "price": "1799.00",
+    "last_posted_at": "2026-11-23T15:31:52.099Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
