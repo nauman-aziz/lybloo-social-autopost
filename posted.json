@@ -564,5 +564,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "failed"
+  },
+  "10334287331559": {
+    "product_title": "Apple USB-C to USB-C Cable — 1m",
+    "handle": "apple-usb-c-to-usb-c-cable",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/apple-usb-c-to-usb-c-cable-1.jpg?v=1791139724&format=pjpg",
+    "price": "2499.00",
+    "last_posted_at": "2026-11-24T15:26:15.302Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
