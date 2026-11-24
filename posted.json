@@ -550,5 +550,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10334287495399": {
+    "product_title": "Google USB-C to USB-C Cable — 1m",
+    "handle": "google-usb-c-to-usb-c-cable",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/google-usb-c-to-usb-c-cable-1.jpg?v=1791139745&format=pjpg",
+    "price": "999.00",
+    "last_posted_at": "2026-11-24T03:06:32.091Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
