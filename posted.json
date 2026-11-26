@@ -620,5 +620,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10328759632103": {
+    "product_title": "Vestel Desibel H500 Bluetooth Speaker",
+    "handle": "vestel-desibel-h500-bluetooth-speaker",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/vestel-desibel-h500-bluetooth-speaker-1-n.jpg?v=1790859417&format=pjpg",
+    "price": "5000.00",
+    "last_posted_at": "2026-11-26T14:36:19.411Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
