@@ -648,5 +648,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10328759566567": {
+    "product_title": "Romoss S20 FlashPower 130W Power Bank — 20,000mAh",
+    "handle": "romoss-ppu20-130w-power-bank-20000mah",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/romoss-ppu20-130w-power-bank-20000mah-1-v2.jpg?v=1790859311&format=pjpg",
+    "price": "14999.00",
+    "last_posted_at": "2026-11-28T00:18:33.100Z",
+    "cycle_number": 1,
+    "format": "carousel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
