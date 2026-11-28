@@ -662,5 +662,19 @@
     "facebook_story_status": "posted",
     "instagram_story_status": "posted",
     "tiktok_status": "sent"
+  },
+  "10328759501031": {
+    "product_title": "Anker Nano 100W USB-C Charger — Adapter Only",
+    "handle": "anker-nano-100w-usb-c-charger",
+    "image": "https://cdn.shopify.com/s/files/1/0808/8469/5271/files/anker-nano-100w-usb-c-charger-5.jpg?v=1793876237&format=pjpg",
+    "price": "9000.00",
+    "last_posted_at": "2026-11-28T13:46:02.017Z",
+    "cycle_number": 1,
+    "format": "reel",
+    "facebook_status": "posted",
+    "instagram_status": "posted",
+    "facebook_story_status": "posted",
+    "instagram_story_status": "posted",
+    "tiktok_status": "prepared"
   }
 }
